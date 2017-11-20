@@ -185,7 +185,7 @@ enum RCOError
 class RCO
 {
 private:
-	int rco_errno;
+	int mRCOErrno;
 	FILE *mF;
 	struct rco_header mHeader;
 	RCOElement mRootElement;
@@ -200,7 +200,7 @@ private:
 	RCOError getFloatArray(std::vector<float> &floats, uint32_t offset, uint32_t len);
 	RCOError getFileData(uint8_t **filedata, uint32_t offset, uint32_t size);
 
-	RCOError loadAttributes(std::vector<RCOAttribute>& attributes, uint32_t offset, uint32_t count);
+	RCOError loadAttributes(RCOElement &el, uint32_t offset, uint32_t count);
 	RCOError loadHeader();
 	RCOError loadElement(RCOElement &el, uint32_t offset);
 

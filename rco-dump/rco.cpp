@@ -49,10 +49,10 @@ std::string RCOAttribute::toString()
 		snprintf(buf, 256, "%u", i);
 		break;
 	case ID_INT:
-		snprintf(buf, 256, "%xu", i);
+		snprintf(buf, 256, "%x", i);
 		break;
 	case ID_INT_LPB:
-		snprintf(buf, 256, "%u", i);
+		snprintf(buf, 256, "%x", i);
 		break;
 	case DATA:
 		snprintf(buf, 256, "%s", s.c_str());
@@ -174,7 +174,7 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t offset, uint32_t size)
 
 RCOError RCO::getIntArray(std::vector<uint32_t>& ints, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.ints_arr_off + offset, SEEK_SET);
+	fseek(mF, mHeader.ints_arr_off + (offset * sizeof(uint32_t)), SEEK_SET);
 
 	for (int i = 0; i < len; i++)
 	{
@@ -188,7 +188,7 @@ RCOError RCO::getIntArray(std::vector<uint32_t>& ints, uint32_t offset, uint32_t
 
 RCOError RCO::getFloatArray(std::vector<float>& floats, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.float_arr_off + offset, SEEK_SET);
+	fseek(mF, mHeader.float_arr_off + (offset * sizeof(float)), SEEK_SET);
 
 	for (int i = 0; i < len; i++)
 	{
@@ -200,8 +200,10 @@ RCOError RCO::getFloatArray(std::vector<float>& floats, uint32_t offset, uint32_
 	return NO_ERROR;
 }
 
-RCOError RCO::loadAttributes(std::vector<RCOAttribute>& attributes, uint32_t offset, uint32_t count)
+RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 {
+	std::vector<RCOAttribute> &attributes = el.attributes;
+
 	rco_tree_table_element_attribute_raw *raw_attr = new rco_tree_table_element_attribute_raw[count];
 
 	fseek(mF, offset, SEEK_SET);
@@ -261,6 +263,15 @@ RCOError RCO::loadAttributes(std::vector<RCOAttribute>& attributes, uint32_t off
 	std::string path;
 	std::string ext;
 	std::string id;
+
+	if (el.name == "locale")
+	{
+		path = "/xmls";
+	}
+	else if (el.name == "texture")
+	{
+		path = "/textures";
+	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
 	{
@@ -324,7 +335,10 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 	if (err != NO_ERROR)
 		return err;
 
-	err = loadAttributes(el.attributes, root_attr_offset, element.attr_ct);
+	err = loadAttributes(el, root_attr_offset, element.attr_ct);
+
+	if (err != NO_ERROR)
+		return err;
 
 	if (element.first_child != 0xFFFFFFFF)
 	{
@@ -351,13 +365,13 @@ RCO::RCO(FILE* f) : mF(f)
 {
 	if (mF == nullptr)
 		return;
-	rco_errno = loadHeader();
-	if (rco_errno != NO_ERROR)
+	mRCOErrno = loadHeader();
+	if (mRCOErrno != NO_ERROR)
 		return;
 
-	rco_errno = loadElement(mRootElement, mHeader.tree_start_off);
+	mRCOErrno = loadElement(mRootElement, mHeader.tree_start_off);
 
-	if (rco_errno != NO_ERROR)
+	if (mRCOErrno != NO_ERROR)
 		printf("Error\n");
 }
 
@@ -366,8 +380,6 @@ void RCO::dumpElement(FILE *f, RCOElement &el)
 	fprintf(f, "<%s", el.name.c_str());
 	for (auto it = el.attributes.begin(); it != el.attributes.end(); it++)
 		fprintf(f, " %s=\"%s\"", (*it).name.c_str(), (*it).toString().c_str());
-
-	
 
 	if (el.children.size() > 0)
 	{
