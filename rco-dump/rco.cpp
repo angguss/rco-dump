@@ -135,8 +135,10 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t offset, uint32_t size)
 
 	uint8_t *fdata = *filedata;
 
-	fread(fdata, sizeof(uint8_t), size, mF);
+	if (fread(fdata, sizeof(uint8_t), size, mF) == 0)
+		return READ_FILE_DATA;
 
+	// We only actually need to do this if 
 	uLongf destlen;
 
 	uncompress(deflated, &destlen, fdata, size);
@@ -390,3 +392,7 @@ void RCO::dump(FILE *f)
 	dumpElement(f, mRootElement);
 }
 
+RCOElement &RCO::getRoot()
+{
+	return mRootElement;
+}

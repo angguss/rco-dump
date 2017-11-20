@@ -178,6 +178,7 @@ enum RCOError
 	READ_STRING_TABLE,
 	READ_STRING_TABLE_NULL_TERM,
 	READ_ID_STR_TABLE_NULL_TERM,
+	READ_FILE_DATA,
 	READ_HEADER,
 };
 
@@ -209,7 +210,7 @@ private:
 	void dumpElement(FILE *f, RCOElement &el);
 public:
 	RCO(FILE *f);
-
+	RCOElement &getRoot();
 	
 	void dump(FILE *f);
 
