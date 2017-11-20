@@ -35,5 +35,11 @@
     <ClCompile Include="rco-dump.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rco.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
