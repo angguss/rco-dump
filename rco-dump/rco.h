@@ -9,22 +9,22 @@ struct rco_header
 {
 	uint8_t magic[4]; //RCOF
 	uint32_t version;
-	
+
 	uint32_t tree_start_off;
 	uint32_t tree_size;
-	
+
 	uint32_t id_str_start_off;
 	uint32_t id_str_size;
-	
+
 	uint32_t id_int_start_off;
 	uint32_t id_int_size;
-	
+
 	uint32_t strings_start_off;
 	uint32_t strings_size;
-	
+
 	uint32_t char_start_off;
 	uint32_t char_size;
-	
+
 	uint32_t styles_off;
 	uint32_t styles_size;
 
@@ -152,10 +152,11 @@ public:
 	int i;
 	float f;
 	std::string s;
-	char c;
+	std::string c;
 	std::vector<uint32_t> ia;
 	std::vector<float> fa;
 	uint8_t *file;
+	uint32_t filelen;
 	std::string fileext;
 	std::string idstr;
 	uint32_t idint;
@@ -175,6 +176,7 @@ public:
 enum RCOError
 {
 	NO_ERROR,
+	READ_CHAR_TABLE,
 	READ_STRING_TABLE,
 	READ_STRING_TABLE_NULL_TERM,
 	READ_ID_STR_TABLE_NULL_TERM,
@@ -186,6 +188,7 @@ enum RCOError
 class RCO
 {
 private:
+	bool mIsRCSF;
 	int mRCOErrno;
 	FILE *mF;
 	struct rco_header mHeader;
@@ -198,11 +201,12 @@ private:
 	RCOError getStyleId(std::string &s, uint32_t offset);
 	RCOError getIdStringString(std::string &s, uint32_t offset, bool loopback);
 	RCOError getIdIntInt(uint32_t &i, uint32_t offset);
+	RCOError getCharTableChar(std::string &c, uint32_t offset, uint32_t len);
 	RCOError getStringTableString(std::string &s, uint32_t offset, uint32_t len);
 	RCOError getStringTableString(std::string &s, uint32_t offset);
 	RCOError getIntArray(std::vector<uint32_t> &ints, uint32_t offset, uint32_t len);
 	RCOError getFloatArray(std::vector<float> &floats, uint32_t offset, uint32_t len);
-	RCOError getFileData(uint8_t **filedata, uint32_t offset, uint32_t size);
+	RCOError getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size);
 
 	RCOError loadAttributes(RCOElement &el, uint32_t offset, uint32_t count);
 	RCOError loadHeader();
@@ -210,12 +214,14 @@ private:
 
 	void registerElement(RCOElement &el, uint32_t absolute_offset);
 	bool tryGetElement(uint32_t absolute_offset, RCOElement &el);
-	
+
 	void dumpElement(FILE *f, RCOElement &el);
 public:
 	RCO(FILE *f);
+	RCO(FILE *f, bool isRCSF);
+
 	RCOElement &getRoot();
-	
+
 	void dump(FILE *f);
 
 };

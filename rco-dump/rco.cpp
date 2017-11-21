@@ -15,38 +15,48 @@ std::string RCO::fileExtensionFromType(std::string type)
 
 std::string RCOAttribute::toString()
 {
-	char buf[256];
-	memset(buf, 0, 256);
-	switch(type)
+	char buf[256 + 1];
+	memset(buf, 0, 256 + 1);
+	switch (type)
 	{
-	case CHAR:
-		snprintf(buf, 256, "%c", c);
-		break;
+		/*case CHAR:
+		for (int i = 0, j = 0; i < c.size(); i++)
+		{
+		char ca = c.c_str()[i];
+		if (ca != '\0')
+		{
+		snprintf(buf + j, 256 - j, "%c", ca);
+		j++;
+		}
+
+		}
+
+		break;*/
 	case FLOAT:
-		snprintf(buf, 256, "%f", f);
+		snprintf(buf, 256, "%.2f", f);
 		break;
 	case INTEGER_ARRAY:
+	{
+		int off = 0;
+		for (int i = 0; i < ia.size() - 1 && ia.size() > 0; i++)
 		{
-			int off = 0;
-			for (int i = 0; i < ia.size() - 1 && ia.size() > 0; i++)
-			{
-				snprintf(buf + off, 256 - off, "%d, ", ia[i]);
-				off = strlen(buf);
-			}
-			snprintf(buf + off, 256 - off, "%d", ia[ia.size() - 1]);
+			snprintf(buf + off, 256 - off, "%d, ", ia[i]);
+			off = strlen(buf);
 		}
-		break;
+		snprintf(buf + off, 256 - off, "%d", ia[ia.size() - 1]);
+	}
+	break;
 	case FLOAT_ARRAY:
+	{
+		int off = 0;
+		for (int i = 0; i < fa.size() - 1 && fa.size() > 0; i++)
 		{
-			int off = 0;
-			for (int i = 0; i < fa.size() - 1 && fa.size() > 0; i++)
-			{
-				snprintf(buf + off, 256 - off, "%.3f, ", fa[i]);
-				off = strlen(buf);
-			}
-			snprintf(buf + off, 256 - off, "%.3f", fa[fa.size() - 1]);
+			snprintf(buf + off, 256 - off, "%.2f, ", fa[i]);
+			off = strlen(buf);
 		}
-		break;
+		snprintf(buf + off, 256 - off, "%.2f", fa[fa.size() - 1]);
+	}
+	break;
 	case ID_STR:
 	case ID_STR_LPB:
 		snprintf(buf, 256, "%s", idstr.c_str());
@@ -72,6 +82,23 @@ std::string RCOAttribute::toString()
 	return buf;
 }
 
+RCOError RCO::getCharTableChar(std::string &c, uint32_t offset, uint32_t len)
+{
+	fseek(mF, mHeader.char_start_off + (offset * 2), SEEK_SET);
+
+	char *buf = new char[len + 1];
+	memset(buf, 0, len + 1);
+
+	if (fread(buf, sizeof(char), len, mF) == 0)
+		return READ_CHAR_TABLE;
+
+	c = std::string(buf, len);
+
+	delete[] buf;
+
+	return NO_ERROR;
+}
+
 RCOError RCO::getStringTableString(std::string& s, uint32_t offset)
 {
 	fseek(mF, mHeader.strings_start_off + offset, SEEK_SET);
@@ -80,7 +107,7 @@ RCOError RCO::getStringTableString(std::string& s, uint32_t offset)
 	memset(buf, 0, 256);
 	if (fread(&buf, sizeof(char), 255, mF) == 0)
 		return READ_STRING_TABLE_NULL_TERM;
-	
+
 	s = buf;
 	return NO_ERROR;
 }
@@ -128,7 +155,7 @@ RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback =
 RCOError RCO::getIdIntInt(uint32_t& i, uint32_t offset)
 {
 	fseek(mF, mHeader.id_int_start_off + offset, SEEK_SET);
-	
+
 	uint32_t loopback;
 
 	fread(&loopback, sizeof(uint32_t), 1, mF);
@@ -137,7 +164,7 @@ RCOError RCO::getIdIntInt(uint32_t& i, uint32_t offset)
 	return NO_ERROR;
 }
 
-RCOError RCO::getFileData(uint8_t **filedata, uint32_t offset, uint32_t size)
+RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size)
 {
 	fseek(mF, mHeader.file_table_off + offset, SEEK_SET);
 
@@ -150,7 +177,6 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t offset, uint32_t size)
 	if (fread(fdata, sizeof(uint8_t), size, mF) == 0)
 		return READ_FILE_DATA;
 
-	// We only actually need to do this if 
 	uLongf destlen;
 
 	uncompress(deflated, &destlen, fdata, size);
@@ -173,15 +199,18 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t offset, uint32_t size)
 	{
 		sprintf(buf2, "%d.%s", offset, unk_fileext);
 	}
-	
-	FILE *dump = fopen(buf2, "wb");
-	fwrite(deflated, sizeof(uint8_t), destlen, dump);
-	fclose(dump);
+
+	uint8_t *deflated_final = new uint8_t[destlen];
+	memcpy(deflated_final, deflated, destlen);
+
+	*filedata = deflated_final;
+	outlen = destlen;
 
 	delete[] deflated;
+	delete[] fdata;
 
 	return NO_ERROR;
-	
+
 }
 
 RCOError RCO::getIntArray(std::vector<uint32_t>& ints, uint32_t offset, uint32_t len)
@@ -220,7 +249,7 @@ RCOError RCO::getStyleId(std::string& s, uint32_t offset)
 
 	if (fread(&styleid, sizeof(uint32_t), 1, mF) == 0)
 		return READ_STYLE_ID;
-	
+
 	char buf[256];
 	snprintf(buf, 256, "%x", styleid);
 
@@ -238,29 +267,27 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 	fseek(mF, offset, SEEK_SET);
 	fread(raw_attr, sizeof(rco_tree_table_element_attribute_raw), count, mF);
-	
+
 
 	for (int i = 0; i < count; i++)
 	{
 		RCOAttribute attr;
-		
+
 		attr.type = static_cast<ATTRIBUTE_TYPE>(raw_attr[i].type);
 		getStringTableString(attr.name, raw_attr[i].string_offset);
 
-		if (attr.name == "style")
-			printf("yes");
-
-		switch(attr.type)
+		switch (attr.type)
 		{
+		case CHAR:
+			getCharTableChar(attr.c, raw_attr[i].c.offset, raw_attr[i].c.len);
+			break;
 		case STRING:
 			getStringTableString(attr.s, raw_attr[i].s.offset, raw_attr[i].s.len);
 			break;
 		case ID_STR_LPB:
-			printf("ID_STR_LPB\n");
 			getIdStringString(attr.idstr, raw_attr[i].id.offset, true);
 			break;
 		case ID_STR:
-			printf("ID_STR\r\n");
 			getIdStringString(attr.idstr, raw_attr[i].id.offset);
 			break;
 		case STYLE_ID:
@@ -283,8 +310,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 			getIdIntInt(attr.idint, raw_attr[i].idref.offset);
 			break;
 		case DATA:
-			printf("Filedata\n");
-			getFileData(&attr.file, raw_attr[i].file.offset, raw_attr[i].file.size);
+			getFileData(&attr.file, attr.filelen, raw_attr[i].file.offset, raw_attr[i].file.size);
 			break;
 		default:
 			printf("unhandled type: %d\n", attr.type);
@@ -299,12 +325,12 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 	if (el.name == "locale")
 	{
-		path = "/xmls";
+		path = "xmls";
 		ext = "xml";
 	}
 	else if (el.name == "texture")
 	{
-		path = "/textures";
+		path = "textures";
 		ext = "gim";
 	}
 
@@ -398,7 +424,11 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 	return err;
 }
 
-RCO::RCO(FILE* f) : mF(f)
+RCO::RCO(FILE* f) : RCO(f, false)
+{
+}
+
+RCO::RCO(FILE *f, bool isRCSF) : mF(f), mIsRCSF(isRCSF)
 {
 	if (mF == nullptr)
 		return;
@@ -415,8 +445,32 @@ RCO::RCO(FILE* f) : mF(f)
 void RCO::dumpElement(FILE *f, RCOElement &el)
 {
 	fprintf(f, "<%s", el.name.c_str());
+
 	for (auto it = el.attributes.begin(); it != el.attributes.end(); it++)
-		fprintf(f, " %s=\"%s\"", (*it).name.c_str(), (*it).toString().c_str());
+	{
+		RCOAttribute &attr = (*it);
+		fprintf(f, " %s=\"%s\"", attr.name.c_str(), attr.toString().c_str());
+		if (attr.name == "src" && !mIsRCSF)
+		{
+			FILE *outfile = fopen(attr.toString().c_str(), "wb");
+			fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+			fclose(outfile);
+
+			// XML files are actually rcsf
+			if (attr.toString().find(".xml") != std::string::npos)
+			{
+				FILE *infil = fopen(attr.toString().c_str(), "rb");
+				RCO tmprco(infil, true);
+				fclose(infil);
+
+
+				outfile = fopen(attr.toString().c_str(), "wb");
+				tmprco.dump(outfile);
+				fclose(outfile);
+			}
+		}
+	}
+
 
 	if (el.children.size() > 0)
 	{
@@ -430,7 +484,7 @@ void RCO::dumpElement(FILE *f, RCOElement &el)
 	}
 
 	if (el.siblings.size() > 0)
-		dumpElement(f, el.siblings.front());	
+		dumpElement(f, el.siblings.front());
 }
 
 void RCO::dump(FILE *f)
