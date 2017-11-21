@@ -215,7 +215,7 @@ private:
 	void registerElement(RCOElement &el, uint32_t absolute_offset);
 	bool tryGetElement(uint32_t absolute_offset, RCOElement &el);
 
-	void dumpElement(FILE *f, RCOElement &el);
+	void dumpElement(FILE *f, RCOElement &el, uint32_t depth);
 public:
 	RCO(FILE *f);
 	RCO(FILE *f, bool isRCSF);

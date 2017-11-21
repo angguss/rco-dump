@@ -442,9 +442,9 @@ RCO::RCO(FILE *f, bool isRCSF) : mF(f), mIsRCSF(isRCSF)
 		printf("Error\n");
 }
 
-void RCO::dumpElement(FILE *f, RCOElement &el)
+void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 {
-	fprintf(f, "<%s", el.name.c_str());
+	fprintf(f, "%*c<%s", depth, ' ', el.name.c_str());
 
 	for (auto it = el.attributes.begin(); it != el.attributes.end(); it++)
 	{
@@ -475,8 +475,8 @@ void RCO::dumpElement(FILE *f, RCOElement &el)
 	if (el.children.size() > 0)
 	{
 		fprintf(f, ">\r\n");
-		dumpElement(f, el.children.front());
-		fprintf(f, "</%s>\r\n", el.name.c_str());
+		dumpElement(f, el.children.front(), depth + 1);
+		fprintf(f, "%*c</%s>\r\n", depth, ' ', el.name.c_str());
 	}
 	else
 	{
@@ -484,7 +484,7 @@ void RCO::dumpElement(FILE *f, RCOElement &el)
 	}
 
 	if (el.siblings.size() > 0)
-		dumpElement(f, el.siblings.front());
+		dumpElement(f, el.siblings.front(), depth);
 }
 
 void RCO::dump(FILE *f)
