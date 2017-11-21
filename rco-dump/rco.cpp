@@ -10,6 +10,8 @@ std::string RCO::fileExtensionFromType(std::string type)
 		return "gim";
 	if (type == "texture/png")
 		return "png";
+	if (type == "sound/vag")
+		return "vag";
 	return "bin";
 }
 
@@ -164,50 +166,59 @@ RCOError RCO::getIdIntInt(uint32_t& i, uint32_t offset)
 	return NO_ERROR;
 }
 
-RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size)
+RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size, bool isCompressed)
 {
 	fseek(mF, mHeader.file_table_off + offset, SEEK_SET);
 
 	*filedata = new uint8_t[size];
-
-	uint8_t *deflated = new uint8_t[1024 * 1024 * 10];
-
+	
 	uint8_t *fdata = *filedata;
+	outlen = size;
 
 	if (fread(fdata, sizeof(uint8_t), size, mF) == 0)
 		return READ_FILE_DATA;
 
-	uLongf destlen;
-
-	uncompress(deflated, &destlen, fdata, size);
-
-	char buf2[256];
-
-	char *gim_fileext = "gim";
-	char *unk_fileext = "bin";
-	char *rcsf_fileext = "rcsf";
-
-	if (memcmp(deflated, "MIG", 3) == 0)
+	if (isCompressed)
 	{
-		sprintf(buf2, "%d.%s", offset, gim_fileext);
-	}
-	else if (memcmp(deflated, "RCSF", 4) == 0)
-	{
-		sprintf(buf2, "%d.%s", offset, rcsf_fileext);
-	}
-	else
-	{
-		sprintf(buf2, "%d.%s", offset, unk_fileext);
-	}
+		uint8_t *deflated = new uint8_t[1024 * 1024 * 10];
 
-	uint8_t *deflated_final = new uint8_t[destlen];
-	memcpy(deflated_final, deflated, destlen);
+		uLongf destlen;
 
-	*filedata = deflated_final;
-	outlen = destlen;
+		uncompress(deflated, &destlen, fdata, size);
 
-	delete[] deflated;
-	delete[] fdata;
+		char buf2[256];
+
+		char *gim_fileext = "gim";
+		char *unk_fileext = "bin";
+		char *rcsf_fileext = "rcsf";
+		char *dds_fileext = "dds";
+
+		if (memcmp(deflated, "MIG", 3) == 0)
+		{
+			sprintf(buf2, "%d.%s", offset, gim_fileext);
+		}
+		else if (memcmp(deflated, "DDS", 3) == 0)
+		{
+			sprintf(buf2, "%d.%s", offset, dds_fileext);
+		}
+		else if (memcmp(deflated, "RCSF", 4) == 0)
+		{
+			sprintf(buf2, "%d.%s", offset, rcsf_fileext);
+		}
+		else
+		{
+			sprintf(buf2, "%d.%s", offset, unk_fileext);
+		}
+
+		uint8_t *deflated_final = new uint8_t[destlen];
+		memcpy(deflated_final, deflated, destlen);
+
+		*filedata = deflated_final;
+		outlen = destlen;
+
+		delete[] deflated;
+		delete[] fdata;
+	}
 
 	return NO_ERROR;
 
@@ -268,13 +279,17 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	fseek(mF, offset, SEEK_SET);
 	fread(raw_attr, sizeof(rco_tree_table_element_attribute_raw), count, mF);
 
-
+	std::unordered_map<int, RCOAttribute> filedata_indexes;
+	
+	// Handle all attributes apart from files
 	for (int i = 0; i < count; i++)
 	{
 		RCOAttribute attr;
 
 		attr.type = static_cast<ATTRIBUTE_TYPE>(raw_attr[i].type);
 		getStringTableString(attr.name, raw_attr[i].string_offset);
+		
+		bool deferred = false;
 
 		switch (attr.type)
 		{
@@ -310,14 +325,33 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 			getIdIntInt(attr.idint, raw_attr[i].idref.offset);
 			break;
 		case DATA:
-			getFileData(&attr.file, attr.filelen, raw_attr[i].file.offset, raw_attr[i].file.size);
+			filedata_indexes.emplace(i, attr);
+			deferred = true;
 			break;
 		default:
 			printf("unhandled type: %d\n", attr.type);
 		}
 
+		if (attr.name == "compress")
+			el.isCompressed = true;
+		if (!deferred)
+			attributes.push_back(attr);
+	}
+
+	// Handle files afterwards (deferred)
+	for (auto it = filedata_indexes.begin(), end = filedata_indexes.end(); it != end; it++)
+	{
+		int index = (*it).first;
+		RCOAttribute &attr = (*it).second;
+
+		if (attr.type == DATA)
+		{
+			getFileData(&attr.file, attr.filelen, raw_attr[index].file.offset, raw_attr[index].file.size, el.isCompressed);
+		}
+
 		attributes.push_back(attr);
 	}
+
 
 	std::string path;
 	std::string ext;
@@ -331,7 +365,10 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	else if (el.name == "texture")
 	{
 		path = "textures";
-		ext = "gim";
+	}
+	else if (el.name == "sounddata")
+	{
+		path = "sounds";
 	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
@@ -348,6 +385,18 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		{
 			char buf[256];
 			sprintf(buf, "%s/%s.%s", path.c_str(), id.c_str(), ext.c_str());
+			(*it).s = buf;
+		}
+		else if ((*it).name == "right")
+		{
+			char buf[256];
+			sprintf(buf, "%s/%s_right.%s", path.c_str(), id.c_str(), ext.c_str());
+			(*it).s = buf;
+		}
+		else if ((*it).name == "left")
+		{
+			char buf[256];
+			sprintf(buf, "%s/%s_left.%s", path.c_str(), id.c_str(), ext.c_str());
 			(*it).s = buf;
 		}
 	}
@@ -450,24 +499,26 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 	{
 		RCOAttribute &attr = (*it);
 		fprintf(f, " %s=\"%s\"", attr.name.c_str(), attr.toString().c_str());
-		if (attr.name == "src" && !mIsRCSF)
+		if (
+			(attr.name == "src" || attr.name == "right" || attr.name == "left") && 
+			!mIsRCSF)
 		{
 			FILE *outfile = fopen(attr.toString().c_str(), "wb");
 			fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
 			fclose(outfile);
 
 			// XML files are actually rcsf
-			if (attr.toString().find(".xml") != std::string::npos)
-			{
-				FILE *infil = fopen(attr.toString().c_str(), "rb");
-				RCO tmprco(infil, true);
-				fclose(infil);
+			//if (attr.toString().find(".xml") != std::string::npos)
+			//{
+			//	FILE *infil = fopen(attr.toString().c_str(), "rb");
+			//	RCO tmprco(infil, true);
+			//	fclose(infil);
 
 
-				outfile = fopen(attr.toString().c_str(), "wb");
-				tmprco.dump(outfile);
-				fclose(outfile);
-			}
+			//	outfile = fopen(attr.toString().c_str(), "wb");
+			//	tmprco.dump(outfile);
+			//	fclose(outfile);
+			//}
 		}
 	}
 

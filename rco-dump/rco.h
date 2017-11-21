@@ -171,6 +171,7 @@ public:
 	std::vector<RCOAttribute> attributes;
 	std::vector<RCOElement> siblings;
 	std::vector<RCOElement> children;
+	bool isCompressed = false;
 };
 
 enum RCOError
@@ -206,7 +207,7 @@ private:
 	RCOError getStringTableString(std::string &s, uint32_t offset);
 	RCOError getIntArray(std::vector<uint32_t> &ints, uint32_t offset, uint32_t len);
 	RCOError getFloatArray(std::vector<float> &floats, uint32_t offset, uint32_t len);
-	RCOError getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size);
+	RCOError getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size, bool isCompressed);
 
 	RCOError loadAttributes(RCOElement &el, uint32_t offset, uint32_t count);
 	RCOError loadHeader();
