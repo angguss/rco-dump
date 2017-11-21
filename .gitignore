@@ -243,7 +243,9 @@ ModelManifest.xml
 /rco-dump/dependencies/zlib
 /rco-dump/textures
 /rco-dump/xmls
+/rco-dump/sounds
 
+*.vag
 *.rcsf
 *.gim
 *.rco

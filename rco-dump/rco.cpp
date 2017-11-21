@@ -3,6 +3,8 @@
 #include <zlib.h>
 
 #include "rco.h"
+#include <locale>
+#include <codecvt>
 
 std::string RCO::fileExtensionFromType(std::string type)
 {
@@ -21,19 +23,13 @@ std::string RCOAttribute::toString()
 	memset(buf, 0, 256 + 1);
 	switch (type)
 	{
-		/*case CHAR:
-		for (int i = 0, j = 0; i < c.size(); i++)
-		{
-		char ca = c.c_str()[i];
-		if (ca != '\0')
-		{
-		snprintf(buf + j, 256 - j, "%c", ca);
-		j++;
-		}
-
-		}
-
-		break;*/
+	case CHAR:
+	{
+		std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
+		auto p = reinterpret_cast<const int16_t *>(c.data());
+		return convert.to_bytes(p, p + c.size());
+	}
+		break;
 	case FLOAT:
 		snprintf(buf, 256, "%.2f", f);
 		break;
@@ -84,17 +80,17 @@ std::string RCOAttribute::toString()
 	return buf;
 }
 
-RCOError RCO::getCharTableChar(std::string &c, uint32_t offset, uint32_t len)
+RCOError RCO::getCharTableChar(std::u16string &c, uint32_t offset, uint32_t len)
 {
 	fseek(mF, mHeader.char_start_off + (offset * 2), SEEK_SET);
 
-	char *buf = new char[len + 1];
-	memset(buf, 0, len + 1);
+	char16_t *buf = new char16_t[len + 2];
+	memset(buf, 0, len + 2);
 
-	if (fread(buf, sizeof(char), len, mF) == 0)
+	if (fread(buf, sizeof(char16_t), len / sizeof(char16_t), mF) == 0)
 		return READ_CHAR_TABLE;
 
-	c = std::string(buf, len);
+	c = std::u16string(buf, len);
 
 	delete[] buf;
 
@@ -508,17 +504,17 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 			fclose(outfile);
 
 			// XML files are actually rcsf
-			//if (attr.toString().find(".xml") != std::string::npos)
-			//{
-			//	FILE *infil = fopen(attr.toString().c_str(), "rb");
-			//	RCO tmprco(infil, true);
-			//	fclose(infil);
+			if (attr.toString().find(".xml") != std::string::npos)
+			{
+				FILE *infil = fopen(attr.toString().c_str(), "rb");
+				RCO tmprco(infil, true);
+				fclose(infil);
 
 
-			//	outfile = fopen(attr.toString().c_str(), "wb");
-			//	tmprco.dump(outfile);
-			//	fclose(outfile);
-			//}
+				outfile = fopen(attr.toString().c_str(), "wb");
+				tmprco.dump(outfile);
+				fclose(outfile);
+			}
 		}
 	}
 

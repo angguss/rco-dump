@@ -152,7 +152,7 @@ public:
 	int i;
 	float f;
 	std::string s;
-	std::string c;
+	std::u16string c;
 	std::vector<uint32_t> ia;
 	std::vector<float> fa;
 	uint8_t *file;
@@ -202,7 +202,7 @@ private:
 	RCOError getStyleId(std::string &s, uint32_t offset);
 	RCOError getIdStringString(std::string &s, uint32_t offset, bool loopback);
 	RCOError getIdIntInt(uint32_t &i, uint32_t offset);
-	RCOError getCharTableChar(std::string &c, uint32_t offset, uint32_t len);
+	RCOError getCharTableChar(std::u16string &c, uint32_t offset, uint32_t len);
 	RCOError getStringTableString(std::string &s, uint32_t offset, uint32_t len);
 	RCOError getStringTableString(std::string &s, uint32_t offset);
 	RCOError getIntArray(std::vector<uint32_t> &ints, uint32_t offset, uint32_t len);
