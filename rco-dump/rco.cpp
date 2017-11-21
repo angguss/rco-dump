@@ -4,6 +4,15 @@
 
 #include "rco.h"
 
+std::string RCO::fileExtensionFromType(std::string type)
+{
+	if (type == "texture/gim")
+		return "gim";
+	if (type == "texture/png")
+		return "png";
+	return "bin";
+}
+
 std::string RCOAttribute::toString()
 {
 	char buf[256];
@@ -43,16 +52,17 @@ std::string RCOAttribute::toString()
 		snprintf(buf, 256, "%s", idstr.c_str());
 		break;
 	case STRING:
+	case STYLE_ID:
 		snprintf(buf, 256, "%s", s.c_str());
 		break;
 	case INTEGER:
 		snprintf(buf, 256, "%u", i);
 		break;
 	case ID_INT:
-		snprintf(buf, 256, "%x", i);
+		snprintf(buf, 256, "%x", idint);
 		break;
 	case ID_INT_LPB:
-		snprintf(buf, 256, "%x", i);
+		snprintf(buf, 256, "%x", idint);
 		break;
 	case DATA:
 		snprintf(buf, 256, "%s", s.c_str());
@@ -96,6 +106,8 @@ RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback =
 
 	fread(&loopback_val, sizeof(uint32_t), 1, mF);
 
+	printf("Loopback value: %d\n", loopback_val);
+
 	memset(buf, 0, 256);
 	if (fread(&buf, sizeof(char), 255, mF) == 0)
 		return READ_ID_STR_TABLE_NULL_TERM;
@@ -103,7 +115,7 @@ RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback =
 	if (loopback)
 	{
 		char buf2[256];
-		fseek(mF, mHeader.id_str_start_off + offset - loopback_val, SEEK_SET);
+		fseek(mF, mHeader.id_str_start_off + loopback_val, SEEK_SET);
 		fread(&buf2, sizeof(char), 255, mF);
 
 		printf("done\n");
@@ -200,6 +212,24 @@ RCOError RCO::getFloatArray(std::vector<float>& floats, uint32_t offset, uint32_
 	return NO_ERROR;
 }
 
+RCOError RCO::getStyleId(std::string& s, uint32_t offset)
+{
+	uint32_t styleid;
+
+	fseek(mF, mHeader.styles_off + offset, SEEK_SET);
+
+	if (fread(&styleid, sizeof(uint32_t), 1, mF) == 0)
+		return READ_STYLE_ID;
+	
+	char buf[256];
+	snprintf(buf, 256, "%x", styleid);
+
+	s = buf;
+
+	return NO_ERROR;
+}
+
+
 RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 {
 	std::vector<RCOAttribute> &attributes = el.attributes;
@@ -232,6 +262,9 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		case ID_STR:
 			printf("ID_STR\r\n");
 			getIdStringString(attr.idstr, raw_attr[i].id.offset);
+			break;
+		case STYLE_ID:
+			getStyleId(attr.s, raw_attr[i].s.offset);
 			break;
 		case FLOAT:
 			attr.f = raw_attr[i].f;
@@ -267,16 +300,20 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	if (el.name == "locale")
 	{
 		path = "/xmls";
+		ext = "xml";
 	}
 	else if (el.name == "texture")
 	{
 		path = "/textures";
+		ext = "gim";
 	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
 	{
 		if ((*it).name == "id")
-			id = (*it).s;
+			id = (*it).toString();
+		if ((*it).name == "type")
+			ext = RCO::fileExtensionFromType((*it).toString());
 	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
@@ -284,7 +321,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		if ((*it).name == "src")
 		{
 			char buf[256];
-			sprintf(buf, "%s/%s.%s", path.c_str(), id.c_str(), (*it).fileext.c_str());
+			sprintf(buf, "%s/%s.%s", path.c_str(), id.c_str(), ext.c_str());
 			(*it).s = buf;
 		}
 	}

@@ -179,6 +179,7 @@ enum RCOError
 	READ_STRING_TABLE_NULL_TERM,
 	READ_ID_STR_TABLE_NULL_TERM,
 	READ_FILE_DATA,
+	READ_STYLE_ID,
 	READ_HEADER,
 };
 
@@ -192,6 +193,9 @@ private:
 	std::unordered_map<int, RCOElement&> mElements;
 	std::unordered_map<std::string, RCOFileData> mFiles;
 
+	static std::string fileExtensionFromType(std::string type);
+
+	RCOError getStyleId(std::string &s, uint32_t offset);
 	RCOError getIdStringString(std::string &s, uint32_t offset, bool loopback);
 	RCOError getIdIntInt(uint32_t &i, uint32_t offset);
 	RCOError getStringTableString(std::string &s, uint32_t offset, uint32_t len);
