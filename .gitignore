@@ -241,8 +241,11 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 /rco-dump/dependencies/zlib
+/rco-dump/textures
+/rco-dump/xmls
 
 *.rcsf
 *.gim
 *.rco
 dump.xml
+~AutoRecover*
