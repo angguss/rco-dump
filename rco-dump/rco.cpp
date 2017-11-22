@@ -166,30 +166,6 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset,
 
 		uncompress(deflated, &destlen, fdata, size);
 
-		char buf2[256];
-
-		char *gim_fileext = "gim";
-		char *unk_fileext = "bin";
-		char *rcsf_fileext = "rcsf";
-		char *dds_fileext = "dds";
-
-		if (memcmp(deflated, "MIG", 3) == 0)
-		{
-			sprintf(buf2, "%d.%s", offset, gim_fileext);
-		}
-		else if (memcmp(deflated, "DDS", 3) == 0)
-		{
-			sprintf(buf2, "%d.%s", offset, dds_fileext);
-		}
-		else if (memcmp(deflated, "RCSF", 4) == 0)
-		{
-			sprintf(buf2, "%d.%s", offset, rcsf_fileext);
-		}
-		else
-		{
-			sprintf(buf2, "%d.%s", offset, unk_fileext);
-		}
-
 		uint8_t *deflated_final = new uint8_t[destlen];
 		memcpy(deflated_final, deflated, destlen);
 
