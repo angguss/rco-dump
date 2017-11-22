@@ -189,9 +189,11 @@ enum RCOError
 class RCO
 {
 private:
+	uint8_t *mBuffer;
+	uint32_t mBufferLen;
+
 	bool mIsRCSF;
 	int mRCOErrno;
-	FILE *mF;
 	struct rco_header mHeader;
 	RCOElement mRootElement;
 	std::unordered_map<int, RCOElement&> mElements;
@@ -220,6 +222,7 @@ private:
 public:
 	RCO(FILE *f);
 	RCO(FILE *f, bool isRCSF);
+	RCO(uint8_t *buffer, uint32_t bufferLen);
 
 	RCOElement &getRoot();
 

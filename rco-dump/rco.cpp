@@ -82,13 +82,10 @@ std::string RCOAttribute::toString()
 
 RCOError RCO::getCharTableChar(std::u16string &c, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.char_start_off + (offset * 2), SEEK_SET);
-
 	char16_t *buf = new char16_t[len + 2];
 	memset(buf, 0, len + 2);
 
-	if (fread(buf, sizeof(char16_t), len / sizeof(char16_t), mF) == 0)
-		return READ_CHAR_TABLE;
+	memcpy(buf, mBuffer + mHeader.char_start_off + (offset * 2), len);
 
 	c = std::u16string(buf, len);
 
@@ -99,12 +96,10 @@ RCOError RCO::getCharTableChar(std::u16string &c, uint32_t offset, uint32_t len)
 
 RCOError RCO::getStringTableString(std::string& s, uint32_t offset)
 {
-	fseek(mF, mHeader.strings_start_off + offset, SEEK_SET);
-
 	char buf[256];
 	memset(buf, 0, 256);
-	if (fread(&buf, sizeof(char), 255, mF) == 0)
-		return READ_STRING_TABLE_NULL_TERM;
+	
+	memcpy(&buf, mBuffer + mHeader.strings_start_off + offset, 255 * sizeof(char));
 
 	s = buf;
 	return NO_ERROR;
@@ -112,38 +107,28 @@ RCOError RCO::getStringTableString(std::string& s, uint32_t offset)
 
 RCOError RCO::getStringTableString(std::string& s, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.strings_start_off + offset, SEEK_SET);
 	char *buf = new char[len + 1];
 	memset(buf, 0, len + 1);
-	if (fread(buf, sizeof(char), len, mF) == 0)
-		return READ_STRING_TABLE;
-
+	memcpy(buf, mBuffer + mHeader.strings_start_off + offset, sizeof(char) * len);
+	
 	s = buf;
 	return NO_ERROR;
 }
 
 RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback = false)
 {
-	fseek(mF, mHeader.id_str_start_off + offset, SEEK_SET);
-
 	char buf[256];
 	uint32_t loopback_val;
 
-	fread(&loopback_val, sizeof(uint32_t), 1, mF);
-
-	printf("Loopback value: %d\n", loopback_val);
-
+	memcpy(&loopback_val, mBuffer + mHeader.id_str_start_off + offset, sizeof(uint32_t));
 	memset(buf, 0, 256);
-	if (fread(&buf, sizeof(char), 255, mF) == 0)
-		return READ_ID_STR_TABLE_NULL_TERM;
+	memcpy(buf, mBuffer + mHeader.id_str_start_off + offset + sizeof(uint32_t), 255 * sizeof(char));
 
 	if (loopback)
 	{
 		char buf2[256];
-		fseek(mF, mHeader.id_str_start_off + loopback_val, SEEK_SET);
-		fread(&buf2, sizeof(char), 255, mF);
-
-		printf("done\n");
+		memcpy(buf2, mBuffer + mHeader.id_str_start_off + loopback_val, sizeof(char) * 255);
+		// we don't even use this anymore
 	}
 
 	s = buf;
@@ -152,27 +137,22 @@ RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback =
 
 RCOError RCO::getIdIntInt(uint32_t& i, uint32_t offset)
 {
-	fseek(mF, mHeader.id_int_start_off + offset, SEEK_SET);
-
 	uint32_t loopback;
 
-	fread(&loopback, sizeof(uint32_t), 1, mF);
-	fread(&i, sizeof(uint32_t), 1, mF);
+	memcpy(&loopback, mBuffer + mHeader.id_int_start_off + offset, sizeof(uint32_t));
+	memcpy(&i, mBuffer + mHeader.id_int_start_off + offset + sizeof(uint32_t), sizeof(uint32_t));
 
 	return NO_ERROR;
 }
 
 RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size, bool isCompressed)
 {
-	fseek(mF, mHeader.file_table_off + offset, SEEK_SET);
-
 	*filedata = new uint8_t[size];
 	
 	uint8_t *fdata = *filedata;
 	outlen = size;
 
-	if (fread(fdata, sizeof(uint8_t), size, mF) == 0)
-		return READ_FILE_DATA;
+	memcpy(fdata, mBuffer + mHeader.file_table_off + offset, size * sizeof(uint8_t));
 
 	if (isCompressed)
 	{
@@ -222,12 +202,10 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset,
 
 RCOError RCO::getIntArray(std::vector<uint32_t>& ints, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.ints_arr_off + (offset * sizeof(uint32_t)), SEEK_SET);
-
 	for (int i = 0; i < len; i++)
 	{
 		uint32_t val;
-		fread(&val, sizeof(uint32_t), 1, mF);
+		memcpy(&val, mBuffer + mHeader.ints_arr_off + (offset * sizeof(uint32_t)) + i * sizeof(uint32_t), sizeof(uint32_t));
 		ints.push_back(val);
 	}
 
@@ -236,12 +214,10 @@ RCOError RCO::getIntArray(std::vector<uint32_t>& ints, uint32_t offset, uint32_t
 
 RCOError RCO::getFloatArray(std::vector<float>& floats, uint32_t offset, uint32_t len)
 {
-	fseek(mF, mHeader.float_arr_off + (offset * sizeof(float)), SEEK_SET);
-
 	for (int i = 0; i < len; i++)
 	{
 		float val;
-		fread(&val, sizeof(float), 1, mF);
+		memcpy(&val, mBuffer + mHeader.ints_arr_off + (offset * sizeof(float)) + i * sizeof(float), sizeof(float));
 		floats.push_back(val);
 	}
 
@@ -252,10 +228,7 @@ RCOError RCO::getStyleId(std::string& s, uint32_t offset)
 {
 	uint32_t styleid;
 
-	fseek(mF, mHeader.styles_off + offset, SEEK_SET);
-
-	if (fread(&styleid, sizeof(uint32_t), 1, mF) == 0)
-		return READ_STYLE_ID;
+	memcpy(&styleid, mBuffer + mHeader.styles_off + offset, sizeof(uint32_t));
 
 	char buf[256];
 	snprintf(buf, 256, "%x", styleid);
@@ -271,9 +244,8 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	std::vector<RCOAttribute> &attributes = el.attributes;
 
 	rco_tree_table_element_attribute_raw *raw_attr = new rco_tree_table_element_attribute_raw[count];
-
-	fseek(mF, offset, SEEK_SET);
-	fread(raw_attr, sizeof(rco_tree_table_element_attribute_raw), count, mF);
+	
+	memcpy(raw_attr, mBuffer + offset, sizeof(rco_tree_table_element_attribute_raw) * count);
 
 	std::unordered_map<int, RCOAttribute> filedata_indexes;
 	
@@ -397,15 +369,15 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		}
 	}
 
+	delete[] raw_attr;
+
 	return NO_ERROR;
 }
 
 
 RCOError RCO::loadHeader()
 {
-	fseek(mF, 0, SEEK_SET);
-	if (fread(&mHeader, sizeof(rco_header), 1, mF) == 0)
-		return READ_HEADER;
+	memcpy(&mHeader, mBuffer, sizeof(rco_header));
 
 	return NO_ERROR;
 }
@@ -433,10 +405,9 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 
 	rco_tree_table_element element;
 
-	fseek(mF, offset, SEEK_SET);
-	fread(&element, sizeof(rco_tree_table_element), 1, mF);
+	memcpy(&element, mBuffer + offset, sizeof(rco_tree_table_element));
 
-	uint32_t root_attr_offset = ftell(mF);
+	uint32_t root_attr_offset = offset + sizeof(rco_tree_table_element);
 
 	err = getStringTableString(el.name, element.element_offset);
 
@@ -469,23 +440,6 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 	return err;
 }
 
-RCO::RCO(FILE* f) : RCO(f, false)
-{
-}
-
-RCO::RCO(FILE *f, bool isRCSF) : mF(f), mIsRCSF(isRCSF)
-{
-	if (mF == nullptr)
-		return;
-	mRCOErrno = loadHeader();
-	if (mRCOErrno != NO_ERROR)
-		return;
-
-	mRCOErrno = loadElement(mRootElement, mHeader.tree_start_off);
-
-	if (mRCOErrno != NO_ERROR)
-		printf("Error\n");
-}
 
 void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 {
@@ -499,25 +453,28 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 			(attr.name == "src" || attr.name == "right" || attr.name == "left") && 
 			!mIsRCSF)
 		{
-			FILE *outfile = fopen(attr.toString().c_str(), "wb");
-			fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
-			fclose(outfile);
-
 			// XML files are actually rcsf
-			if (attr.toString().find(".xml") != std::string::npos)
+			
+			if (attr.toString().find(".xml") == std::string::npos)
 			{
-				FILE *infil = fopen(attr.toString().c_str(), "rb");
-				RCO tmprco(infil, true);
-				fclose(infil);
+				FILE *outfile = fopen(attr.toString().c_str(), "wb");
+				fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+				fclose(outfile);
+			}
+			else
+			{
+				uint8_t *buffercopy = new uint8_t[attr.filelen];
+				memcpy(buffercopy, attr.file, attr.filelen);
+				RCO tmprco(buffercopy, attr.filelen);
 
-
-				outfile = fopen(attr.toString().c_str(), "wb");
+				FILE *outfile = fopen(attr.toString().c_str(), "wb");
 				tmprco.dump(outfile);
 				fclose(outfile);
+
+				delete[] buffercopy;
 			}
 		}
 	}
-
 
 	if (el.children.size() > 0)
 	{
@@ -545,4 +502,43 @@ void RCO::dump(FILE *f)
 RCOElement &RCO::getRoot()
 {
 	return mRootElement;
+}
+
+
+RCO::RCO(FILE* f) : RCO(f, false)
+{
+}
+
+RCO::RCO(FILE *f, bool isRCSF) : mIsRCSF(isRCSF)
+{
+	if (f == nullptr)
+		return;
+
+	fseek(f, 0, SEEK_END);
+	mBufferLen = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	mBuffer = new uint8_t[mBufferLen];
+	fread(mBuffer, sizeof(uint8_t), mBufferLen, f);
+
+	mRCOErrno = loadHeader();
+	if (mRCOErrno != NO_ERROR)
+		return;
+
+	mRCOErrno = loadElement(mRootElement, mHeader.tree_start_off);
+
+	if (mRCOErrno != NO_ERROR)
+		printf("Error\n");
+}
+
+RCO::RCO(uint8_t *buffer, uint32_t bufferLen) : mBuffer(buffer), mBufferLen(bufferLen)
+{
+	mRCOErrno = loadHeader();
+	if (mRCOErrno != NO_ERROR)
+		return;
+
+	mRCOErrno = loadElement(mRootElement, mHeader.tree_start_off);
+
+	if (mRCOErrno != NO_ERROR)
+		printf("Error!\n");
 }
