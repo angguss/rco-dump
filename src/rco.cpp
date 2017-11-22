@@ -4,8 +4,8 @@
 #include <locale>
 #include <codecvt>
 
-#include "platform.h"
-#include "rco.h"
+#include <platform.h>
+#include <rco.h>
 
 
 std::string RCO::fileExtensionFromType(std::string type)

@@ -3,12 +3,10 @@
 
 #define _CRT_SECURE_NO_WARNINGS 1
 
-#include "stdafx.h"
 #include <string>
 #include <stdio.h>
 
-#include "platform.h"
-#include "rco.h"
+#include <rco.h>
 
 int main(int argc, char *argv[])
 {
