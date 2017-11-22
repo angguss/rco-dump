@@ -10,6 +10,14 @@
 
 std::string RCO::fileExtensionFromType(std::string type)
 {
+	if (type == "texture/jpg")
+		return "jpg";
+	if (type == "texture/tif")
+		return "tif";
+	if (type == "texture/gif")
+		return "gif";
+	if (type == "texture/gxt")
+		return "gxt";
 	if (type == "texture/gim")
 		return "gim";
 	if (type == "texture/png")
@@ -18,6 +26,14 @@ std::string RCO::fileExtensionFromType(std::string type)
 		return "dds";
 	if (type == "sound/vag")
 		return "vag";
+	if (type == "sound/wav")
+		return "wav";
+	if (type == "sound/mp3")
+		return "mp3";
+	if (type == "sound/at3")
+		return "at3";
+	if (type == "sound/aac")
+		return "aac";
 	return "bin";
 }
 
