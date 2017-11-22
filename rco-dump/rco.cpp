@@ -14,6 +14,8 @@ std::string RCO::fileExtensionFromType(std::string type)
 		return "gim";
 	if (type == "texture/png")
 		return "png";
+	if (type == "texture/dds")
+		return "dds";
 	if (type == "sound/vag")
 		return "vag";
 	return "bin";
@@ -332,7 +334,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		path = "xmls";
 		ext = "xml";
 	}
-	else if (el.name == "texture")
+	else if (el.name == "texture" || el.name == "override_texture")
 	{
 		path = "textures";
 	}
