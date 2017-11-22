@@ -95,6 +95,8 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(ProjectDir)dependencies\zlib\lib\zlibwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>4194304</StackReserveSize>
+      <StackCommitSize>8096</StackCommitSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
