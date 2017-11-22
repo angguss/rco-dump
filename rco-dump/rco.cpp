@@ -1,10 +1,12 @@
 #include <cstdio>
 #include <cassert>
 #include <zlib.h>
-
-#include "rco.h"
 #include <locale>
 #include <codecvt>
+
+#include "platform.h"
+#include "rco.h"
+
 
 std::string RCO::fileExtensionFromType(std::string type)
 {
@@ -441,7 +443,7 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 }
 
 
-void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
+void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string outputDirectory = "")
 {
 	fprintf(f, "%*c<%s", depth, ' ', el.name.c_str());
 
@@ -457,7 +459,7 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 			
 			if (attr.toString().find(".xml") == std::string::npos)
 			{
-				FILE *outfile = fopen(attr.toString().c_str(), "wb");
+				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
 				fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
 				fclose(outfile);
 			}
@@ -467,8 +469,10 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 				memcpy(buffercopy, attr.file, attr.filelen);
 				RCO tmprco(buffercopy, attr.filelen);
 
-				FILE *outfile = fopen(attr.toString().c_str(), "wb");
-				tmprco.dump(outfile);
+				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
+				
+				tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
+
 				fclose(outfile);
 
 				delete[] buffercopy;
@@ -479,7 +483,7 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 	if (el.children.size() > 0)
 	{
 		fprintf(f, ">\r\n");
-		dumpElement(f, el.children.front(), depth + 1);
+		dumpElement(f, el.children.front(), depth + 1, outputDirectory);
 		fprintf(f, "%*c</%s>\r\n", depth, ' ', el.name.c_str());
 	}
 	else
@@ -488,15 +492,23 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0)
 	}
 
 	if (el.siblings.size() > 0)
-		dumpElement(f, el.siblings.front(), depth);
+		dumpElement(f, el.siblings.front(), depth, outputDirectory);
 }
 
-void RCO::dump(FILE *f)
+void RCO::dump(std::string outputDirectory)
 {
-	if (!f)
-		return;
+	createDirectory(outputDirectory + "/");
+	createDirectory(outputDirectory + "/xmls/");
+	createDirectory(outputDirectory + "/textures/");
+	createDirectory(outputDirectory + "/sounds/");
 
-	dumpElement(f, mRootElement);
+	std::string outputFile = outputDirectory + "/index.xml";
+
+	FILE *f = fopen(outputFile.c_str(), "wb");
+
+	dumpElement(f, mRootElement, 0, outputDirectory);
+
+	fclose(f);
 }
 
 RCOElement &RCO::getRoot()

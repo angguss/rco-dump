@@ -7,14 +7,21 @@
 #include <string>
 #include <stdio.h>
 
+#include "platform.h"
 #include "rco.h"
 
 int main(int argc, char *argv[])
 {
 	FILE *f;
 	std::string file;
+	std::string outdir = ".";
+	
 	if (argc > 1)
 		file = argv[1];
+
+	if (argc > 2)
+		outdir = argv[2];
+
 
 	if (file.empty())
 		return 1;
@@ -24,8 +31,9 @@ int main(int argc, char *argv[])
 		return 1;
 
 	RCO rco(f);
-	FILE *fw = fopen("dump.xml", "wb");
-	rco.dump(fw);
+	
+	outdir = outdir + "/" + file.substr(0, file.length() - 4);
+	rco.dump(outdir);
 
 
 	//struct rco_file rco;

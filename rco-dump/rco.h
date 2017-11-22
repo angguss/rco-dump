@@ -218,7 +218,8 @@ private:
 	void registerElement(RCOElement &el, uint32_t absolute_offset);
 	bool tryGetElement(uint32_t absolute_offset, RCOElement &el);
 
-	void dumpElement(FILE *f, RCOElement &el, uint32_t depth);
+protected:
+	void dumpElement(FILE *f, RCOElement &el, uint32_t depth, std::string outputDirectory);
 public:
 	RCO(FILE *f);
 	RCO(FILE *f, bool isRCSF);
@@ -226,6 +227,6 @@ public:
 
 	RCOElement &getRoot();
 
-	void dump(FILE *f);
+	void dump(std::string outputDirectory);
 
 };
