@@ -30,9 +30,15 @@ int main(int argc, char *argv[])
 	if (!f)
 		return 1;
 
+	// Got an absolute file
+	
+
 	RCO rco(f);
 	
-	outdir = outdir + "/" + file.substr(0, file.length() - 4);
+	if (file[1] == ':')
+		outdir = file.substr(0, file.length() - 4);
+	else
+		outdir = outdir + "/" + file.substr(0, file.length() - 4);
 	rco.dump(outdir);
 
 
