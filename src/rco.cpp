@@ -56,7 +56,7 @@ std::string RCOAttribute::toString()
 #else
 		std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
 		return convert.to_bytes(c.data());
-#endif	
+#endif
 	}
 		break;
 	case FLOAT:
@@ -466,34 +466,37 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 		{
 			// XML files are actually rcsf
 
-			if (attr.toString().find(".xml") == std::string::npos)
+			if (el.name != "string")
 			{
-				std::string output_filename = outputDirectory + "/" + attr.toString();
-				FILE *outfile = fopen(output_filename.c_str(), "wb");
-				if (outfile != NULL)
+				if (attr.toString().find(".xml") == std::string::npos)
 				{
-					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
-					fclose(outfile);
+					std::string output_filename = outputDirectory + "/" + attr.toString();
+					FILE *outfile = fopen(output_filename.c_str(), "wb");
+					if (outfile != NULL)
+					{
+						fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+						fclose(outfile);
+					}
+					else
+					{
+						printf("ERROR: Couldn't open file for writing: %s\n", output_filename.c_str());
+					}
+
 				}
 				else
 				{
-					printf("ERROR: Couldn't open file for writing: %s\n", output_filename);
+					uint8_t *buffercopy = new uint8_t[attr.filelen];
+					memcpy(buffercopy, attr.file, attr.filelen);
+					RCO tmprco(buffercopy, attr.filelen);
+
+					FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
+
+					tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
+
+					fclose(outfile);
+
+					delete[] buffercopy;
 				}
-
-			}
-			else
-			{
-				uint8_t *buffercopy = new uint8_t[attr.filelen];
-				memcpy(buffercopy, attr.file, attr.filelen);
-				RCO tmprco(buffercopy, attr.filelen);
-
-				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
-
-				tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
-
-				fclose(outfile);
-
-				delete[] buffercopy;
 			}
 		}
 	}
