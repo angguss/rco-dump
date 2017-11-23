@@ -9,7 +9,6 @@
 #include <sys/stat.h>
 #endif
 
-
 inline void createDirectory(std::string dir)
 {
 #ifdef _WIN32
@@ -19,4 +18,10 @@ inline void createDirectory(std::string dir)
 #endif	
 }
 
+inline void writeIndent(FILE *f, int depth)
+{
+	if (!f) return;
+	for (unsigned int i = 0; i < depth; i++)
+		fprintf(f, "\t");
+}
 
