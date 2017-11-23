@@ -460,43 +460,37 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 	{
 		RCOAttribute &attr = (*it);
 		fprintf(f, " %s=\"%s\"", attr.name.c_str(), attr.toString().c_str());
-		if (
-			(attr.name == "src" || attr.name == "right" || attr.name == "left") &&
-			!mIsRCSF)
+
+		if (attr.type == DATA)
 		{
-			// XML files are actually rcsf
-
-			if (el.name != "string")
+			if (attr.toString().find(".xml") == std::string::npos)
 			{
-				if (attr.toString().find(".xml") == std::string::npos)
+				std::string output_filename = outputDirectory + "/" + attr.toString();
+				FILE *outfile = fopen(output_filename.c_str(), "wb");
+				if (outfile != NULL)
 				{
-					std::string output_filename = outputDirectory + "/" + attr.toString();
-					FILE *outfile = fopen(output_filename.c_str(), "wb");
-					if (outfile != NULL)
-					{
-						fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
-						fclose(outfile);
-					}
-					else
-					{
-						printf("ERROR: Couldn't open file for writing: %s\n", output_filename.c_str());
-					}
-
+					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+					fclose(outfile);
 				}
 				else
 				{
-					uint8_t *buffercopy = new uint8_t[attr.filelen];
-					memcpy(buffercopy, attr.file, attr.filelen);
-					RCO tmprco(buffercopy, attr.filelen);
-
-					FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
-
-					tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
-
-					fclose(outfile);
-
-					delete[] buffercopy;
+					printf("ERROR: Couldn't open file for writing: %s\n", output_filename.c_str());
 				}
+
+			}
+			else
+			{
+				uint8_t *buffercopy = new uint8_t[attr.filelen];
+				memcpy(buffercopy, attr.file, attr.filelen);
+				RCO tmprco(buffercopy, attr.filelen);
+
+				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
+
+				tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
+
+				fclose(outfile);
+
+				delete[] buffercopy;
 			}
 		}
 	}
