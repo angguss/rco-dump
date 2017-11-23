@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.5.0)
 
 project(rco-dump)
 
@@ -16,7 +16,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 
 if (WIN32)
-	
+
 	find_library(ZLIB_LIBRARY zlibstatic.lib HINTS ${CMAKE_SOURCE_DIR}/libs/zlib/libs/x86/static/Debug)
 	include_directories(${CMAKE_SOURCE_DIR}/libs/zlib/include)
 
@@ -29,6 +29,11 @@ if (WIN32)
 endif (WIN32)
 
 if (UNIX)
-	target_link_libraries(rco-dump
-		zlib)
+	find_package(ZLIB REQUIRED)
+	if (ZLIB_FOUND)
+		include_directories(${ZLIB_INCLUDE_DIRS})
+		target_link_libraries(rco-dump ${ZLIB_LIBRARIES})
+
+	endif (ZLIB_FOUND)
+	SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -std=c++11 ${GCC_COVERAGE_COMPILE_FLAGS}" )
 endif(UNIX)

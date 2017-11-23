@@ -4,6 +4,10 @@
 #include <locale>
 #include <codecvt>
 
+#ifdef __GNUC__
+#include <cstring>
+#endif
+
 #include <platform.h>
 #include <rco.h>
 
@@ -45,9 +49,10 @@ std::string RCOAttribute::toString()
 	{
 	case CHAR:
 	{
-		std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
-		auto p = reinterpret_cast<const int16_t *>(c.data());
-		return convert.to_bytes(p, p + c.size());
+		std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+		//auto p = reinterpret_cast<const wchar_t *>(c.data());
+		//return convert.to_bytes(p, p + c.size());
+		return convert.to_bytes(c.data());
 	}
 		break;
 	case FLOAT:
@@ -118,7 +123,7 @@ RCOError RCO::getStringTableString(std::string& s, uint32_t offset)
 {
 	char buf[256];
 	memset(buf, 0, 256);
-	
+
 	memcpy(&buf, mBuffer + mHeader.strings_start_off + offset, 255 * sizeof(char));
 
 	s = buf;
@@ -130,7 +135,7 @@ RCOError RCO::getStringTableString(std::string& s, uint32_t offset, uint32_t len
 	char *buf = new char[len + 1];
 	memset(buf, 0, len + 1);
 	memcpy(buf, mBuffer + mHeader.strings_start_off + offset, sizeof(char) * len);
-	
+
 	s = buf;
 	return NO_ERROR;
 }
@@ -165,10 +170,10 @@ RCOError RCO::getIdIntInt(uint32_t& i, uint32_t offset)
 	return NO_ERROR;
 }
 
-RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size, bool isCompressed)
+RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset, uint32_t size, bool isCompressed, uint32_t originalSize)
 {
 	*filedata = new uint8_t[size];
-	
+
 	uint8_t *fdata = *filedata;
 	outlen = size;
 
@@ -176,9 +181,12 @@ RCOError RCO::getFileData(uint8_t **filedata, uint32_t &outlen, uint32_t offset,
 
 	if (isCompressed)
 	{
-		uint8_t *deflated = new uint8_t[1024 * 1024 * 10];
+		if (originalSize <= 0)
+			return NO_ERROR;
 
-		uLongf destlen;
+		uint8_t *deflated = new uint8_t[originalSize];
+
+		uLongf destlen = originalSize;//1024 * 1024 * 10;
 
 		uncompress(deflated, &destlen, fdata, size);
 
@@ -240,11 +248,11 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	std::vector<RCOAttribute> &attributes = el.attributes;
 
 	rco_tree_table_element_attribute_raw *raw_attr = new rco_tree_table_element_attribute_raw[count];
-	
+
 	memcpy(raw_attr, mBuffer + offset, sizeof(rco_tree_table_element_attribute_raw) * count);
 
 	std::unordered_map<int, RCOAttribute> filedata_indexes;
-	
+
 	// Handle all attributes apart from files
 	for (int i = 0; i < count; i++)
 	{
@@ -252,7 +260,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 		attr.type = static_cast<ATTRIBUTE_TYPE>(raw_attr[i].type);
 		getStringTableString(attr.name, raw_attr[i].string_offset);
-		
+
 		bool deferred = false;
 
 		switch (attr.type)
@@ -298,6 +306,9 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 		if (attr.name == "compress")
 			el.isCompressed = true;
+		else if (attr.name == "origsize")
+			el.originalSize = attr.i;
+
 		if (!deferred)
 			attributes.push_back(attr);
 	}
@@ -310,7 +321,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 		if (attr.type == DATA)
 		{
-			getFileData(&attr.file, attr.filelen, raw_attr[index].file.offset, raw_attr[index].file.size, el.isCompressed);
+			getFileData(&attr.file, attr.filelen, raw_attr[index].file.offset, raw_attr[index].file.size, el.isCompressed, el.originalSize);
 		}
 
 		attributes.push_back(attr);
@@ -446,16 +457,25 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 		RCOAttribute &attr = (*it);
 		fprintf(f, " %s=\"%s\"", attr.name.c_str(), attr.toString().c_str());
 		if (
-			(attr.name == "src" || attr.name == "right" || attr.name == "left") && 
+			(attr.name == "src" || attr.name == "right" || attr.name == "left") &&
 			!mIsRCSF)
 		{
 			// XML files are actually rcsf
-			
+
 			if (attr.toString().find(".xml") == std::string::npos)
 			{
-				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
-				fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
-				fclose(outfile);
+				const char *output_filename = (outputDirectory + "/" + attr.toString()).c_str();
+				FILE *outfile = fopen(output_filename, "wb");
+				if (outfile != NULL)
+				{
+					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+					fclose(outfile);
+				}
+				else
+				{
+					printf("ERROR: Couldn't open file for writing: %s\n", output_filename);
+				}
+
 			}
 			else
 			{
@@ -464,7 +484,7 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 				RCO tmprco(buffercopy, attr.filelen);
 
 				FILE *outfile = fopen((outputDirectory + "/" + attr.toString()).c_str(), "wb");
-				
+
 				tmprco.dumpElement(outfile, tmprco.getRoot(), 0, outputDirectory);
 
 				fclose(outfile);
