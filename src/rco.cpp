@@ -49,10 +49,14 @@ std::string RCOAttribute::toString()
 	{
 	case CHAR:
 	{
+#ifdef _WIN32
+		std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
+		auto p = reinterpret_cast<const int16_t *>(c.data());
+		return convert.to_bytes(p);
+#else
 		std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-		//auto p = reinterpret_cast<const wchar_t *>(c.data());
-		//return convert.to_bytes(p, p + c.size());
 		return convert.to_bytes(c.data());
+#endif	
 	}
 		break;
 	case FLOAT:
@@ -464,8 +468,8 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 
 			if (attr.toString().find(".xml") == std::string::npos)
 			{
-				const char *output_filename = (outputDirectory + "/" + attr.toString()).c_str();
-				FILE *outfile = fopen(output_filename, "wb");
+				std::string output_filename = outputDirectory + "/" + attr.toString();
+				FILE *outfile = fopen(output_filename.c_str(), "wb");
 				if (outfile != NULL)
 				{
 					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
