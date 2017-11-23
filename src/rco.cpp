@@ -308,7 +308,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 			printf("unhandled type: %d\n", attr.type);
 		}
 
-		if (attr.name == "compress")
+		if (attr.name == "compress" && attr.toString() == "on")
 			el.isCompressed = true;
 		else if (attr.name == "origsize")
 			el.originalSize = attr.i;
