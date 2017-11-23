@@ -121,21 +121,6 @@ struct rco_tree_table_element
 	uint32_t last_child;
 };
 
-
-struct rco_file_raw
-{
-	rco_header header;
-	uint32_t *tree;
-	uint8_t *id_str;
-	uint8_t *id_int;
-	uint8_t *strings;
-	uint8_t *chars;
-	uint8_t *styles;
-	uint8_t *ints_arr;
-	double *float_arr;
-	uint8_t *file_table;
-};
-
 class RCOFileData
 {
 	uint32_t offset;
@@ -191,15 +176,19 @@ class RCO
 private:
 	uint8_t *mBuffer = NULL;
 	uint32_t mBufferLen = 0;
+	bool mVerbose = true;
+	bool mIsRCSF = false;
+	int mRCOErrno = NO_ERROR;
 
-	bool mIsRCSF;
-	int mRCOErrno;
 	struct rco_header mHeader;
 	RCOElement mRootElement;
-	std::unordered_map<int, RCOElement&> mElements;
+	std::unordered_map<int, RCOElement> mElements;
 	std::unordered_map<std::string, RCOFileData> mFiles;
-
+	std::unordered_map<std::string, RCOElement> mStringTable;
 	static std::string fileExtensionFromType(std::string type);
+	static void log(std::string str);
+	void logf(const char *sformat, ...);
+	static std::string typeToString(ATTRIBUTE_TYPE type);
 
 	RCOError getStyleId(std::string &s, uint32_t offset);
 	RCOError getIdStringString(std::string &s, uint32_t offset, bool loopback);
@@ -214,9 +203,6 @@ private:
 	RCOError loadAttributes(RCOElement &el, uint32_t offset, uint32_t count);
 	RCOError loadHeader();
 	RCOError loadElement(RCOElement &el, uint32_t offset);
-
-	void registerElement(RCOElement &el, uint32_t absolute_offset);
-	bool tryGetElement(uint32_t absolute_offset, RCOElement &el);
 
 protected:
 	void dumpElement(FILE *f, RCOElement &el, uint32_t depth, std::string outputDirectory);

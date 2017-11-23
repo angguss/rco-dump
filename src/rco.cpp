@@ -11,7 +11,6 @@
 #include <platform.h>
 #include <rco.h>
 
-
 std::string RCO::fileExtensionFromType(std::string type)
 {
 	if (type == "texture/jpg")
@@ -41,6 +40,60 @@ std::string RCO::fileExtensionFromType(std::string type)
 	return "bin";
 }
 
+std::string RCO::typeToString(ATTRIBUTE_TYPE type)
+{
+	switch (type)
+	{
+	case CHAR:
+		return "ATTRIBUTE_TYPE.CHAR";
+	case DATA:
+		return "ATTRIBUTE_TYPE.DATA";
+	case FLOAT:
+		return "ATTRIBUTE_TYPE.FLOAT";
+	case FLOAT_ARRAY:
+		return "ATTRIBUTE_TYPE.FLOAT_ARRAY";
+	case ID_INT: 
+		return "ATTRIBUTE_TYPE.ID_INT";
+	case ID_INT_LPB:
+		return "ATTRIBUTE_TYPE.ID_INT_LPB";
+	case ID_STR_LPB:
+		return "ATTRIBUTE_TYPE.ID_STR_LPB";
+	case ID_STR:
+		return "ATTRIBUTE_TYPE.ID_STR";
+	case INTEGER:
+		return "ATTRIBUTE_TYPE.INTEGER";
+	case INTEGER_ARRAY:
+		return "ATTRIBUTE_TYPE.INTEGER_ARRAY";
+	case NONE:
+		return "ATTRIBUTE_TYPE.NONE";
+	case STRING:
+		return "ATTRIBUTE_TYPE.STRING";
+	case STYLE_ID:
+		return "STYLE_ID";
+	}
+
+	return "NO KNOWN TYPE";
+}
+
+void RCO::log(std::string str)
+{
+	printf("%s\n", str.c_str());
+}
+
+void RCO::logf(const char* sformat, ...)
+{
+	if (!mVerbose)
+		return;
+
+	char buf[1000];
+	memset(buf, 0, (999 + 1) * sizeof(char));
+	va_list marker;
+	va_start(marker, sformat);
+	vsnprintf(buf, 999, sformat, marker);
+	va_end(marker);
+	printf("%s\n", buf);
+}
+
 std::string RCOAttribute::toString()
 {
 	char buf[256 + 1];
@@ -49,6 +102,7 @@ std::string RCOAttribute::toString()
 	{
 	case CHAR:
 	{
+// TODO: Move this to platform.h
 #ifdef _WIN32
 		std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
 		auto p = reinterpret_cast<const int16_t *>(c.data());
@@ -153,13 +207,6 @@ RCOError RCO::getIdStringString(std::string& s, uint32_t offset, bool loopback =
 	memset(buf, 0, 256);
 	memcpy(buf, mBuffer + mHeader.id_str_start_off + offset + sizeof(uint32_t), 255 * sizeof(char));
 
-	if (loopback)
-	{
-		char buf2[256];
-		memcpy(buf2, mBuffer + mHeader.id_str_start_off + loopback_val, sizeof(char) * 255);
-		// we don't even use this anymore
-	}
-
 	s = buf;
 	return NO_ERROR;
 }
@@ -225,7 +272,7 @@ RCOError RCO::getFloatArray(std::vector<float>& floats, uint32_t offset, uint32_
 	for (int i = 0; i < len; i++)
 	{
 		float val;
-		memcpy(&val, mBuffer + mHeader.ints_arr_off + (offset * sizeof(float)) + i * sizeof(float), sizeof(float));
+		memcpy(&val, mBuffer + mHeader.float_arr_off + (offset * sizeof(float)) + i * sizeof(float), sizeof(float));
 		floats.push_back(val);
 	}
 
@@ -246,7 +293,6 @@ RCOError RCO::getStyleId(std::string& s, uint32_t offset)
 	return NO_ERROR;
 }
 
-
 RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 {
 	std::vector<RCOAttribute> &attributes = el.attributes;
@@ -262,43 +308,45 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	{
 		RCOAttribute attr;
 
-		attr.type = static_cast<ATTRIBUTE_TYPE>(raw_attr[i].type);
-		getStringTableString(attr.name, raw_attr[i].string_offset);
+		rco_tree_table_element_attribute_raw &cur_attr = raw_attr[i];
+
+		attr.type = static_cast<ATTRIBUTE_TYPE>(cur_attr.type);
+		getStringTableString(attr.name, cur_attr.string_offset);
 
 		bool deferred = false;
 
 		switch (attr.type)
 		{
 		case CHAR:
-			getCharTableChar(attr.c, raw_attr[i].c.offset, raw_attr[i].c.len);
+			getCharTableChar(attr.c, cur_attr.c.offset, cur_attr.c.len);
 			break;
 		case STRING:
-			getStringTableString(attr.s, raw_attr[i].s.offset, raw_attr[i].s.len);
+			getStringTableString(attr.s, cur_attr.s.offset, cur_attr.s.len);
 			break;
 		case ID_STR_LPB:
-			getIdStringString(attr.idstr, raw_attr[i].id.offset, true);
+			getIdStringString(attr.idstr, cur_attr.id.offset, true);
 			break;
 		case ID_STR:
-			getIdStringString(attr.idstr, raw_attr[i].id.offset);
+			getIdStringString(attr.idstr, cur_attr.id.offset);
 			break;
 		case STYLE_ID:
-			getStyleId(attr.s, raw_attr[i].s.offset);
+			getStyleId(attr.s, cur_attr.s.offset);
 			break;
 		case FLOAT:
-			attr.f = raw_attr[i].f;
+			attr.f = cur_attr.f;
 			break;
 		case INTEGER:
-			attr.i = raw_attr[i].i;
+			attr.i = cur_attr.i;
 			break;
 		case INTEGER_ARRAY:
-			getIntArray(attr.ia, raw_attr[i].ia.offset, raw_attr[i].ia.num);
+			getIntArray(attr.ia, cur_attr.ia.offset, cur_attr.ia.num);
 			break;
 		case FLOAT_ARRAY:
-			getFloatArray(attr.fa, raw_attr[i].fa.offset, raw_attr[i].fa.num);
+			getFloatArray(attr.fa, cur_attr.fa.offset, cur_attr.fa.num);
 			break;
 		case ID_INT:
 		case ID_INT_LPB:
-			getIdIntInt(attr.idint, raw_attr[i].idref.offset);
+			getIdIntInt(attr.idint, cur_attr.idref.offset);
 			break;
 		case DATA:
 			filedata_indexes.emplace(i, attr);
@@ -330,7 +378,6 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 
 		attributes.push_back(attr);
 	}
-
 
 	std::string path;
 	std::string ext;
@@ -385,30 +432,12 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	return NO_ERROR;
 }
 
-
 RCOError RCO::loadHeader()
 {
 	memcpy(&mHeader, mBuffer, sizeof(rco_header));
 
 	return NO_ERROR;
 }
-
-void RCO::registerElement(RCOElement& el, uint32_t absolute_offset)
-{
-	if (mElements.count(absolute_offset) <= 0)
-		mElements.emplace(absolute_offset, el);
-}
-
-bool RCO::tryGetElement(uint32_t absolute_offset, RCOElement &el)
-{
-	if (mElements.count(absolute_offset) > 0)
-	{
-		el = mElements.at(absolute_offset);
-		return true;
-	}
-	return false;
-}
-
 
 RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 {
@@ -450,7 +479,6 @@ RCOError RCO::loadElement(RCOElement &el, uint32_t offset)
 
 	return err;
 }
-
 
 void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string outputDirectory = "")
 {
@@ -522,7 +550,6 @@ void RCO::dump(std::string outputDirectory)
 	std::string outputFile = outputDirectory + "/index.xml";
 
 	FILE *f = fopen(outputFile.c_str(), "wb");
-
 
 	fprintf(f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n");
 	dumpElement(f, mRootElement, 0, outputDirectory);
