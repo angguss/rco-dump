@@ -396,6 +396,12 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	{
 		path = "sounds";
 	}
+	else if (el.name == "layout")
+	{
+		path = "layouts";
+		// Just a binary file but makes sense to give it a separate ext
+		ext = "bin";
+	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
 	{
@@ -546,6 +552,7 @@ void RCO::dump(std::string outputDirectory)
 	createDirectory(outputDirectory + "/xmls/");
 	createDirectory(outputDirectory + "/textures/");
 	createDirectory(outputDirectory + "/sounds/");
+	createDirectory(outputDirectory + "/layouts/");
 
 	std::string outputFile = outputDirectory + "/index.xml";
 
