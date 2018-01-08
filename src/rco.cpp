@@ -45,29 +45,29 @@ std::string RCO::typeToString(ATTRIBUTE_TYPE type)
 	switch (type)
 	{
 	case CHAR:
-		return "ATTRIBUTE_TYPE.CHAR";
+		return "CHAR";
 	case DATA:
-		return "ATTRIBUTE_TYPE.DATA";
+		return "DATA";
 	case FLOAT:
-		return "ATTRIBUTE_TYPE.FLOAT";
+		return "FLOAT";
 	case FLOAT_ARRAY:
-		return "ATTRIBUTE_TYPE.FLOAT_ARRAY";
+		return "FLOAT_ARRAY";
 	case ID_INT: 
-		return "ATTRIBUTE_TYPE.ID_INT";
+		return "ID_INT";
 	case ID_INT_LPB:
-		return "ATTRIBUTE_TYPE.ID_INT_LPB";
+		return "ID_INT_LPB";
 	case ID_STR_LPB:
-		return "ATTRIBUTE_TYPE.ID_STR_LPB";
+		return "ID_STR_LPB";
 	case ID_STR:
-		return "ATTRIBUTE_TYPE.ID_STR";
+		return "ID_STR";
 	case INTEGER:
-		return "ATTRIBUTE_TYPE.INTEGER";
+		return "INTEGER";
 	case INTEGER_ARRAY:
-		return "ATTRIBUTE_TYPE.INTEGER_ARRAY";
+		return "INTEGER_ARRAY";
 	case NONE:
-		return "ATTRIBUTE_TYPE.NONE";
+		return "NONE";
 	case STRING:
-		return "ATTRIBUTE_TYPE.STRING";
+		return "STRING";
 	case STYLE_ID:
 		return "STYLE_ID";
 	}
@@ -158,6 +158,8 @@ std::string RCOAttribute::toString()
 	case DATA:
 		snprintf(buf, 256, "%s", s.c_str());
 		break;
+	default:
+		printf("UNSUPPORTED TYPE\n");
 	}
 
 	return buf;
