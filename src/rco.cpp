@@ -101,17 +101,7 @@ std::string RCOAttribute::toString()
 	switch (type)
 	{
 	case CHAR:
-	{
-// TODO: Move this to platform.h
-#ifdef _WIN32
-		std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
-		auto p = reinterpret_cast<const int16_t *>(c.data());
-		return convert.to_bytes(p);
-#else
-		std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-		return convert.to_bytes(c.data());
-#endif
-	}
+		return utf16_to_utf8(c);
 		break;
 	case FLOAT:
 		snprintf(buf, 256, "%.2f", f);
