@@ -2,6 +2,8 @@
 #include "util.h"
 #include <iomanip>
 
+std::unordered_map<int, std::string> Util::indentCache;
+
 int Util::readString(uint8_t *buf, std::string &out)
 {
 	uint8_t len;

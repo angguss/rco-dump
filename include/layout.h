@@ -5,6 +5,13 @@
 
 #define LAYOUT_MAX_STR 255
 
+enum ProgressBarType
+{
+	BarNormal,
+	BarAnimation,
+	BarRigid
+};
+
 enum ScrollBarVisibility
 {
 	Visible,
@@ -137,7 +144,7 @@ struct FontData
 	std::string fontFamily;
 
 	static int read(uint8_t *buf, FontData &out);
-	std::string writeXml(int indent) const;
+	std::string writeXml(int indent, std::string name = "FontData") const;
 };
 
 struct layout_header
@@ -182,6 +189,17 @@ private:
 	bool animating = false;	
 };
 
+class ProgressBar : public Widget
+{
+public:
+	uint8_t *read(uint8_t *buf) override;
+	std::string writeXml(int indent) override;
+
+private:
+	ProgressBarType progressBarType;
+	float progress;
+};
+
 class Button : public Widget
 {
 public:
@@ -224,6 +242,30 @@ private:
 	VerticalAlignment verticalAlignment;
 };
 
+class TextField : public Widget
+{
+public:
+	uint8_t *read(uint8_t *buf) override;
+	std::string writeXml(int indent) override;
+	
+private:
+	bool passwordMode;
+	bool acceptsReturn;
+	int textInputMode;
+	int imeWindowMode;
+	int imeEnterLabel;
+	std::string imeWindowTitle;
+	std::string text;
+	std::string placeholder;
+	Color placeHolderColor;
+	Color textColor;
+	FontData placeholderFont;
+	FontData textFont;
+	HorizontalAlignment horizontalAlignment;
+	VerticalAlignment verticalAlignment;
+	TextTrimming textTrimming;
+	LineBreak lineBreak;
+};
 
 class ImageBox : public Widget
 {

@@ -119,16 +119,16 @@ int FontData::read(uint8_t* buf, FontData &out)
 	return (sizeof(out.fontSize) * 3) + out.fontFamily.length() + sizeof(uint8_t);
 }
 
-std::string FontData::writeXml(int indent) const
+std::string FontData::writeXml(int indent, std::string name) const
 {
 	std::stringstream str;
 
-	str << Util::getIndent(indent) << "<FontData>" << std::endl;
+	str << Util::getIndent(indent) << "<" << name << ">" << std::endl;
 	Util::writeXmlElement(str, indent + 1, "FontFamily", fontFamily);
 	Util::writeXmlElement(str, indent + 1, "FontSize", fontSize);
 	Util::writeXmlElement(str, indent + 1, "FontStyle", fontStyle);
 	Util::writeXmlElement(str, indent + 1, "FontWeight", fontWeight);
-	str << Util::getIndent(indent) << "</FontData>" << std::endl;
+	str << Util::getIndent(indent) << "</" << name << ">" << std::endl;
 
 	return str.str();
 }
@@ -198,6 +198,29 @@ uint8_t* BusyIndicator::read(uint8_t* buf)
 	buf += Util::readBool(buf, animating);
 	buf = Widget::read(buf);
 	return buf;
+}
+
+
+uint8_t* ProgressBar::read(uint8_t* buf)
+{
+	int tmp;
+	buf += Util::readInt32(buf, tmp);
+	progressBarType = static_cast<ProgressBarType>(tmp);
+	buf += Util::readFloat32(buf, progress);
+	return Widget::read(buf);
+}
+
+std::string ProgressBar::writeXml(int indent)
+{
+	std::stringstream str;
+	
+	str << Util::getIndent(indent) << "<ProgressBar";
+	writeXmlAttributes(str);
+	Util::writeXmlAttribute(str, "ProgressBarType", progressBarType);
+	Util::writeXmlAttribute(str, "Progress", progress);
+	str << "/>" << std::endl;
+
+	return str.str();
 }
 
 uint8_t* Button::read(uint8_t* buf)
@@ -457,6 +480,64 @@ std::string Label::writeXml(int indent)
 	return str.str();
 }
 
+uint8_t* TextField::read(uint8_t* buf)
+{
+	buf += Util::readString(buf, text);
+	buf += Util::readString(buf, placeholder);
+	buf += FontData::read(buf, textFont);
+	buf += Color::read(buf, textColor);
+
+	int tmp;
+	buf += Util::readInt32(buf, tmp);
+	horizontalAlignment = static_cast<HorizontalAlignment>(tmp);
+	buf += Util::readInt32(buf, tmp);
+	verticalAlignment = static_cast<VerticalAlignment>(tmp);
+	buf += Util::readInt32(buf, tmp);
+	textTrimming = static_cast<TextTrimming>(tmp);
+	buf += Util::readInt32(buf, tmp);
+	lineBreak = static_cast<LineBreak>(tmp);
+	buf += Util::readInt32(buf, textInputMode);
+	buf += Util::readBool(buf, passwordMode);
+	buf += Util::readInt32(buf, imeWindowMode);
+	buf += Util::readString(buf, imeWindowTitle);
+	buf += Util::readInt32(buf, imeEnterLabel);
+	buf += Util::readBool(buf, acceptsReturn);
+	buf += Color::read(buf, placeHolderColor);
+	buf += FontData::read(buf, placeholderFont);
+
+	return Widget::read(buf);
+}
+
+std::string TextField::writeXml(int indent)
+{
+	std::stringstream str;
+	str << Util::getIndent(indent) << "<TextField";
+	writeXmlAttributes(str);
+	str << ">" << std::endl;
+
+	Util::writeXmlElement(str, indent + 1, "Text", text);
+	str << textColor.writeXml(indent + 1, "TextColor");
+	str << textFont.writeXml(indent + 1, "TextFontData");
+	Util::writeXmlElement(str, indent + 1, "InputMode", textInputMode);
+	Util::writeXmlElement(str, indent + 1, "PasswordMode", passwordMode);
+	Util::writeXmlElement(str, indent + 1, "AcceptsReturn", acceptsReturn);
+	Util::writeXmlElement(str, indent + 1, "ImeWindowTitle", imeWindowTitle);
+	Util::writeXmlElement(str, indent + 1, "ImeEnterLabel", imeEnterLabel);
+	Util::writeXmlElement(str, indent + 1, "ImeWindowMode", imeWindowMode);
+	Util::writeXmlElement(str, indent + 1, "Placeholder", placeholder);
+	str << placeHolderColor.writeXml(indent + 1, "PlaceHolderColor");
+	str << placeholderFont.writeXml(indent + 1, "PlaceholderFont");
+	Util::writeXmlElement(str, indent + 1, "TextTrimming", textTrimming);
+	Util::writeXmlElement(str, indent + 1, "LineBreak", lineBreak);
+	Util::writeXmlElement(str, indent + 1, "HorizontalAlignment", horizontalAlignment);
+	Util::writeXmlElement(str, indent + 1, "VerticalAlignment", verticalAlignment);
+
+	str << Util::getIndent(indent) << "</TextField>";
+
+	return str.str();
+}
+
+
 std::string SceneW::writeXml(int indent)
 {
 	std::stringstream str;
@@ -618,6 +699,25 @@ void LayoutFile::processWidget(uint8_t* buf, Widget *widget)
 
 			widget->children.push_back(panel);
 			widgets.push_back(panel);
+		}
+		else if (name == "TextField")
+		{
+			TextField *textField = new TextField();
+			buf = textField->read(buf);
+
+			if (textField->numChildren > 0)
+				processWidget(buf, textField);
+
+			widget->children.push_back(textField);
+			widgets.push_back(textField);
+		}
+		else if (name == "ProgressBar")
+		{
+			ProgressBar *progressBar = new ProgressBar();
+			buf = progressBar->read(buf);
+
+			widget->children.push_back(progressBar);
+			widgets.push_back(progressBar);
 		}
 		else
 		{
