@@ -52,11 +52,6 @@ typedef enum {
 	ID_INT,
 } ATTRIBUTE_TYPE;
 
-struct SingleValue {
-	int intValue;
-	float floatValue;
-};
-
 struct string_data_raw {
 	int offset;
 	int len;
