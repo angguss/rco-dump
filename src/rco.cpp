@@ -25,6 +25,9 @@ std::string RCO::fileExtensionFromType(std::string type)
 		return "gim";
 	if (type == "texture/png")
 		return "png";
+	// Some PS4 RCOs have just png and not texture/png
+	if (type == "png")
+		return "png";
 	if (type == "texture/dds")
 		return "dds";
 	if (type == "sound/vag")
@@ -409,6 +412,12 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 		{
 			char buf[256];
 			sprintf(buf, "%s/%s.%s", path.c_str(), id.c_str(), ext.c_str());
+			(*it).s = buf;
+		}
+		else if ((*it).name == "src_4k")
+		{
+			char buf[256];
+			sprintf(buf, "%s/%s_4k.%s", path.c_str(), id.c_str(), ext.c_str());
 			(*it).s = buf;
 		}
 		else if ((*it).name == "right")
