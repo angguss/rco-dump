@@ -8,7 +8,11 @@ set(VERSION_MINOR 1)
 add_executable(rco-dump
 	${CMAKE_SOURCE_DIR}/src/rco-dump.cpp
 	${CMAKE_SOURCE_DIR}/src/rco.cpp
+	${CMAKE_SOURCE_DIR}/src/layout.cpp
+	${CMAKE_SOURCE_DIR}/src/util.cpp
 	${CMAKE_SOURCE_DIR}/include/rco.h
+	${CMAKE_SOURCE_DIR}/include/layout.h
+	${CMAKE_SOURCE_DIR}/include/util.h
 	${CMAKE_SOURCE_DIR}/include/platform.h)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

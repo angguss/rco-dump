@@ -10,6 +10,7 @@
 
 #include <platform.h>
 #include <rco.h>
+#include "layout.h"
 
 std::string RCO::fileExtensionFromType(std::string type)
 {
@@ -395,7 +396,7 @@ RCOError RCO::loadAttributes(RCOElement &el, uint32_t offset, uint32_t count)
 	{
 		path = "layouts";
 		// Just a binary file but makes sense to give it a separate ext
-		ext = "bin";
+		ext = "pslayout";
 	}
 
 	for (auto it = attributes.begin(); it != attributes.end(); it++)
@@ -499,22 +500,8 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 
 		if (attr.type == DATA)
 		{
-			if (attr.toString().find(".xml") == std::string::npos)
-			{
-				std::string output_filename = outputDirectory + "/" + attr.toString();
-				FILE *outfile = fopen(output_filename.c_str(), "wb");
-				if (outfile != NULL)
-				{
-					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
-					fclose(outfile);
-				}
-				else
-				{
-					printf("ERROR: Couldn't open file for writing: %s\n", output_filename.c_str());
-				}
-
-			}
-			else
+			// Handle locale XML files
+			if (attr.toString().find(".xml") != std::string::npos)
 			{
 				uint8_t *buffercopy = new uint8_t[attr.filelen];
 				memcpy(buffercopy, attr.file, attr.filelen);
@@ -527,6 +514,39 @@ void RCO::dumpElement(FILE *f, RCOElement &el, uint32_t depth = 0, std::string o
 				fclose(outfile);
 
 				delete[] buffercopy;
+			}
+			else if (attr.toString().find(".pslayout") != std::string::npos)
+			{
+				uint8_t *buffercopy = new uint8_t[attr.filelen];
+				memcpy(buffercopy, attr.file, attr.filelen);
+				LayoutFile layout(buffercopy);
+				
+				
+				std::string output_filename = outputDirectory + "/" + attr.toString() + ".xml";
+				FILE *outfile = fopen(output_filename.c_str(), "wb");
+				
+				if (outfile != nullptr)
+				{
+					layout.write(outfile);
+					fclose(outfile);
+				}
+				
+
+			}
+			// Handle anything else (textures, sounds, etc)
+			else
+			{
+				std::string output_filename = outputDirectory + "/" + attr.toString();
+				FILE *outfile = fopen(output_filename.c_str(), "wb");
+				if (outfile != nullptr)
+				{
+					fwrite(attr.file, sizeof(uint8_t), attr.filelen, outfile);
+					fclose(outfile);
+				}
+				else
+				{
+					printf("ERROR: Couldn't open file for writing: %s\n", output_filename.c_str());
+				}
 			}
 		}
 	}

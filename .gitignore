@@ -240,8 +240,9 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
-./src/rcos
-./src/rcos/*
+src/rcos
+src/rcos/*
+libs/*
 
 *.vag
 *.rcsf

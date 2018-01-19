@@ -23,12 +23,13 @@ Run rco-dump on an rco file (or drag & drop)
 
 	rco-dump accessibility_plugin.rco
 
-And it will create a directory with the extracted contents
+The program will create a directory with the extracted contents
 
 	accessibility_plugin/
 	accessibility_plugin/index.xml
 	accessibility_plugin/sounds/*
 	accessibility_plugin/textures/*
 	accessibility_plugin/xmls/*
+	accessibility_plugin/layouts/*
 
 
