@@ -3,6 +3,9 @@
 #endif
 
 #include <string>
+#ifdef __GNUC__
+#include <cstring>
+#endif
 #include <stdio.h>
 
 #include <rco.h>

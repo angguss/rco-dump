@@ -1,4 +1,7 @@
 #include <sstream>
+#ifdef __GNUC__
+#include <memory.h>
+#endif
 #include "util.h"
 #include <iomanip>
 
