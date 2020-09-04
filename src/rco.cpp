@@ -279,7 +279,7 @@ RCOError RCO::getStyleId(std::string& s, uint32_t offset)
 {
 	uint32_t styleid;
 
-	memcpy(&styleid, mBuffer + mHeader.styles_off + offset, sizeof(uint32_t));
+	memcpy(&styleid, mBuffer + mHeader.styles_off + offset * sizeof(uint32_t), sizeof(uint32_t));
 
 	char buf[256];
 	snprintf(buf, 256, "%x", styleid);
